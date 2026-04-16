@@ -62,6 +62,8 @@ class PocClient:
         self.workspace = workspace.resolve()
         self.auto_allow = auto_allow
         self.terminals: dict[str, TerminalState] = {}
+        self._last_tool_signature: tuple[str, str, tuple[str, ...]] | None = None
+        self._pending_tool_locations: dict[str, tuple[str, ...]] = {}
 
     async def request_permission(
         self,
@@ -102,11 +104,28 @@ class PocClient:
                 agent_print(f"- {entry.status}: {entry.content}")
             return
         if kind in {"tool_call", "tool_call_update"}:
-            status = f" {update.status}" if getattr(update, "status", None) else ""
-            agent_print(f"\n[tool]{status} {update.title}")
-            if getattr(update, "locations", None):
-                for location in update.locations:
-                    agent_print(f"  path: {location.path}")
+            status = getattr(update, "status", None) or ""
+            title = self._clean_tool_title(getattr(update, "title", None))
+            tool_call_id = getattr(update, "tool_call_id", None)
+            label = title or (f"id={tool_call_id}" if tool_call_id else "")
+            locations = tuple(location.path for location in getattr(update, "locations", None) or [])
+            if status == "pending" and not title and tool_call_id:
+                self._pending_tool_locations[tool_call_id] = locations
+                return
+            if not locations and tool_call_id:
+                locations = self._pending_tool_locations.get(tool_call_id, locations)
+            if status in {"completed", "failed"} and tool_call_id:
+                self._pending_tool_locations.pop(tool_call_id, None)
+            signature = (status, label, locations)
+            if signature == self._last_tool_signature:
+                return
+
+            line = f"[tool] {status} {label}".rstrip()
+            agent_print(f"\n{line}")
+            self._last_tool_signature = signature
+            if locations:
+                for path in locations:
+                    agent_print(f"  path: {path}")
             return
         if kind == "usage_update":
             agent_print(f"\n[usage] context {update.used}/{update.size}")
@@ -230,6 +249,12 @@ class PocClient:
                     if option.kind == kind:
                         return option
         return next((option for option in options if option.kind.startswith("allow")), None)
+
+    def _clean_tool_title(self, title: Any) -> str:
+        if title is None:
+            return ""
+        text = str(title).strip()
+        return "" if text.lower() == "none" else text
 
     def _resolve_inside_workspace(self, path: str | Path) -> Path:
         target = Path(path).expanduser()

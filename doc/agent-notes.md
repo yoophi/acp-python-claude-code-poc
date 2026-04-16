@@ -186,6 +186,7 @@ npm install -g @mariozechner/pi-coding-agent
 - ACP params의 MCP server 정보는 세션 상태에 저장되지만 Pi로 직접 연결되지는 않습니다.
 - assistant streaming은 별도 thought stream이 아니라 `agent_message_chunk`로 전달됩니다.
 - Zed 중심으로 개발되어 다른 ACP client에서는 호환성 차이가 있을 수 있습니다.
+- `pi-acp`가 title 없는 tool update와 path 증분 업데이트를 자주 보낼 수 있어 POC에서 출력 노이즈를 완화합니다. 자세한 내용은 [pi-tool-output-noise.md](pi-tool-output-noise.md)를 참고하세요.
 
 ## 사용자 Skill 및 MCP 정리
 

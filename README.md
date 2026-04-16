@@ -11,6 +11,7 @@ Agent Client Protocol(ACP)을 이용해 Python 클라이언트에서 coding agen
 
 에이전트별 자세한 ACP 정보와 주의사항은 [doc/agent-notes.md](doc/agent-notes.md)를 참고하세요.
 Pi agent의 tool 출력 노이즈 처리 배경은 [doc/pi-tool-output-noise.md](doc/pi-tool-output-noise.md)를 참고하세요.
+프로그램 동작 방식의 Mermaid graph 정리는 [doc/program-flow.md](doc/program-flow.md)를 참고하세요.
 
 기본 agent는 `claude-code`입니다.
 

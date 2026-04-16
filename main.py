@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from acp import PROTOCOL_VERSION, spawn_agent_process, text_block
+from acp import PROTOCOL_VERSION, RequestError, spawn_agent_process, text_block
 from acp.schema import (
     AllowedOutcome,
     ClientCapabilities,
@@ -38,6 +38,8 @@ DEFAULT_STDIO_BUFFER_LIMIT_MB = 50
 AGENT_COMMANDS = {
     "claude-code": "npx -y @agentclientprotocol/claude-agent-acp",
     "codex": "npx -y @zed-industries/codex-acp",
+    "opencode": "npx -y opencode-ai acp",
+    "pi": "npx -y pi-acp",
 }
 BLUE = "\033[34m"
 RESET = "\033[0m"
@@ -92,7 +94,7 @@ class PocClient:
         if kind == "agent_thought_chunk":
             text = getattr(getattr(update, "content", None), "text", None)
             if text:
-                agent_print(f"\n[thought] {text}")
+                agent_print(text, end="")
                 return
         if kind == "plan":
             agent_print("\n[plan]")
@@ -299,7 +301,12 @@ async def run_poc(args: argparse.Namespace) -> int:
         response = await agent.prompt([text_block(args.goal)], session_id=session.session_id)
         print(f"\n[poc] stop_reason: {response.stop_reason}")
 
-        await agent.close_session(session.session_id)
+        try:
+            await agent.close_session(session.session_id)
+        except RequestError as exc:
+            if exc.code != -32601:
+                raise
+            print("[poc] session/close is not supported by this agent; continuing shutdown.")
         if process.returncode is not None and process.returncode != 0:
             print(f"[poc] agent process exited with {process.returncode}", file=sys.stderr)
             return process.returncode
